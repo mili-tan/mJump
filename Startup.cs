@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -27,8 +28,9 @@ namespace mJump
                 });
                 endpoints.Map("/{str}", async context =>
                 {
+                    var str = context.GetRouteValue("str").ToString();
                     context.Response.StatusCode = 301;
-                    context.Response.Redirect("https://github.com/mili-tan");
+                    context.Response.Redirect(str == "mili" ? "https://github.com/mili-tan" : "https://github.com/");
                     await context.Response.WriteAsync("Moved");
                 });
             });

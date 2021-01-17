@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using LiteDB;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +11,12 @@ namespace mJump
     {
         static void Main(string[] args)
         {
+            var db = new LiteDatabase(@"MURL.db");
+            var col = db.GetCollection<MURL>("MURL");
+            if (!col.Exists(x => x.Name == "test")) col.Insert(new MURL {Id = "test", Name = "test"});
+            var i = col.FindOne(x => x.Name == "test");
+            Console.WriteLine(i.Name);
+            
             var host = new WebHostBuilder()
                 .UseKestrel()
                 .UseContentRoot(AppDomain.CurrentDomain.SetupInformation.ApplicationBase)
@@ -26,6 +33,12 @@ namespace mJump
                 .Build();
 
             host.Run();
+        }
+
+        public class MURL
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
         }
     }
 }
