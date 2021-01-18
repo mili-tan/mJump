@@ -1,3 +1,4 @@
+using LiteDB;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -10,6 +11,9 @@ namespace mJump
 {
     public class Startup
     {
+        private static LiteDatabase MyLiteDB = new("mjump.db");
+        private static ILiteCollection<JumpEntity> MyCollection = MyLiteDB.GetCollection<JumpEntity>("MJUMP");
+
         public void ConfigureServices(IServiceCollection services)
         {
 
@@ -26,14 +30,29 @@ namespace mJump
                     context.Response.ContentType = "text/html";
                     await context.Response.WriteAsync("Welcome to mJump");
                 });
-                endpoints.Map("/{str}", async context =>
+                endpoints.Map("/{Name}", async context =>
                 {
-                    var str = context.GetRouteValue("str").ToString();
-                    context.Response.StatusCode = 301;
-                    context.Response.Redirect(str == "mili" ? "https://github.com/mili-tan" : "https://github.com/");
-                    await context.Response.WriteAsync("Moved");
+                    var name = context.GetRouteValue("Name").ToString();
+                    if (MyCollection.Exists(x=> x.Name == name))
+                    {
+                        var redirectUrl = MyCollection.FindOne(x => x.Name == name).RedirectUrl;
+                        context.Response.StatusCode = 301;
+                        context.Response.Redirect(redirectUrl);
+                        await context.Response.WriteAsync("Move to " + redirectUrl);
+                    }
+                    else
+                    {
+                        context.Response.StatusCode = 404;
+                        await context.Response.WriteAsync("Not found");
+                    }
                 });
             });
+        }
+
+        public class JumpEntity
+        {
+            public string Name { get; set; }
+            public string RedirectUrl { get; set; }
         }
     }
 }
