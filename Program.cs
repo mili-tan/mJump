@@ -10,6 +10,7 @@ namespace mJump
     {
         static void Main(string[] args)
         {
+            Console.WriteLine(Startup.UID);
             var host = new WebHostBuilder()
                 .UseKestrel()
                 .UseContentRoot(AppDomain.CurrentDomain.SetupInformation.ApplicationBase)

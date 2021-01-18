@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+using System.Web;
 using LiteDB;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -11,12 +14,14 @@ namespace mJump
 {
     public class Startup
     {
+        public static Guid UID = Guid.NewGuid();
         private static LiteDatabase MyLiteDB = new("mjump.db");
         private static ILiteCollection<JumpEntity> MyCollection = MyLiteDB.GetCollection<JumpEntity>("MJUMP");
 
         public void ConfigureServices(IServiceCollection services)
         {
             MyCollection.EnsureIndex(x => x.Name, true);
+            File.WriteAllText("token.txt", UID.ToString());
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory)
@@ -29,6 +34,29 @@ namespace mJump
                 {
                     context.Response.ContentType = "text/html";
                     await context.Response.WriteAsync("Welcome to mJump");
+                });
+                endpoints.Map($"/{UID}/add", async context =>
+                {
+                    var query = context.Request.Query;
+                    if (query.TryGetValue("url", out var url) && query.TryGetValue("name", out var name))
+                    {
+                        if (MyCollection.Exists(x => x.Name == name))
+                            await context.Response.WriteAsync("Already Exists");
+                        else
+                        {
+                            MyCollection.Insert(new JumpEntity
+                            {
+                                StatusCode = query.TryGetValue("code", out var code) ? int.Parse(code) : 302,
+                                RedirectUrl = HttpUtility.UrlDecode(url.ToString()),
+                                Name = name.ToString()
+                            });
+                            await context.Response.WriteAsync("OK");
+                        }
+                    }
+                    else
+                    {
+                        await context.Response.WriteAsync("Invalid");
+                    }
                 });
                 endpoints.Map("/{Name}", async context =>
                 {
