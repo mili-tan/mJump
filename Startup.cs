@@ -16,7 +16,7 @@ namespace mJump
 
         public void ConfigureServices(IServiceCollection services)
         {
-
+            MyCollection.EnsureIndex(x => x.Name, true);
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory)
@@ -35,10 +35,10 @@ namespace mJump
                     var name = context.GetRouteValue("Name").ToString();
                     if (MyCollection.Exists(x=> x.Name == name))
                     {
-                        var redirectUrl = MyCollection.FindOne(x => x.Name == name).RedirectUrl;
-                        context.Response.StatusCode = 301;
-                        context.Response.Redirect(redirectUrl);
-                        await context.Response.WriteAsync("Move to " + redirectUrl);
+                        var entity = MyCollection.FindOne(x => x.Name == name);
+                        context.Response.StatusCode = entity.StatusCode;
+                        context.Response.Redirect(entity.RedirectUrl);
+                        await context.Response.WriteAsync("Move to " + entity.RedirectUrl);
                     }
                     else
                     {
@@ -53,6 +53,7 @@ namespace mJump
         {
             public string Name { get; set; }
             public string RedirectUrl { get; set; }
+            public int StatusCode { get; set; }
         }
     }
 }
