@@ -60,8 +60,8 @@ namespace mJump
             Client = new MongoClient(connection);
             Database = Client.GetDatabase(dbName);
             Collection = Database.GetCollection<JumpEntity>(collection);
-            Collection.Indexes.CreateOne(
-                new CreateIndexModel<JumpEntity>(Builders<JumpEntity>.IndexKeys.Text(x => x.Name)));
+            //Collection.Indexes.CreateOne(
+            //    new CreateIndexModel<JumpEntity>(Builders<JumpEntity>.IndexKeys.Text(x => x.Name)));
         }
 
         public class JumpEntity
