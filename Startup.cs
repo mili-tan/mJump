@@ -12,13 +12,16 @@ namespace mJump
     public class Startup
     {
         public static Guid UID = Guid.NewGuid();
-        private static bool IsMongo = File.Exists("mongo.txt");
+        private static bool isMongo = File.Exists("mongo.txt");
 
         public void ConfigureServices(IServiceCollection services)
         {
-            if (IsMongo) MongoDbRoutes.Init(File.ReadAllText("mongo.txt"));
+            if (isMongo) MongoDbRoutes.Init(File.ReadAllText("mongo.txt"));
             else LiteDbRoutes.Init();
-            File.WriteAllText("token.txt", UID.ToString());
+            Console.WriteLine("IsMongo:" + isMongo);
+
+            if (File.Exists("token.txt")) UID = Guid.Parse(File.ReadAllText("token.txt"));
+            else File.WriteAllText("token.txt", UID.ToString());
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory)
@@ -35,9 +38,9 @@ namespace mJump
                 endpoints.Map("/IsMongo", async context =>
                 {
                     context.Response.ContentType = "text/html";
-                    await context.Response.WriteAsync("IsMongo:" + IsMongo);
+                    await context.Response.WriteAsync("IsMongo:" + isMongo);
                 });
-            }).UseEndpoints(IsMongo ? MongoDbRoutes.Route : LiteDbRoutes.Route);
+            }).UseEndpoints(isMongo ? MongoDbRoutes.Route : LiteDbRoutes.Route);
         }
     }
 }
