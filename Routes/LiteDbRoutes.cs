@@ -1,4 +1,5 @@
-﻿using System.Web;
+﻿using System.Linq;
+using System.Web;
 using LiteDB;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -17,7 +18,8 @@ namespace mJump
                 var query = context.Request.Query;
                 if (query.TryGetValue("url", out var url) && query.TryGetValue("name", out var name))
                 {
-                    if (Collection.Exists(x => x.Name == name))
+                    var nameStr = name.ToString().Split('.').FirstOrDefault();
+                    if (Collection.Exists(x => x.Name == nameStr))
                         await context.Response.WriteAsync("Already Exists");
                     else
                     {
@@ -25,7 +27,7 @@ namespace mJump
                         {
                             StatusCode = query.TryGetValue("code", out var code) ? int.Parse(code) : 302,
                             RedirectUrl = HttpUtility.UrlDecode(url.ToString()),
-                            Name = name.ToString()
+                            Name = nameStr
                         });
                         await context.Response.WriteAsync("OK");
                     }
@@ -34,12 +36,12 @@ namespace mJump
             });
             endpoints.Map("/{Name}", async context =>
             {
-                var name = context.GetRouteValue("Name").ToString();
+                var name = context.GetRouteValue("Name").ToString().Split('.').FirstOrDefault();
                 if (Collection.Exists(x => x.Name == name))
                 {
                     var entity = Collection.FindOne(x => x.Name == name);
-                    context.Response.StatusCode = entity.StatusCode;
                     context.Response.Redirect(entity.RedirectUrl);
+                    context.Response.StatusCode = entity.StatusCode;
                     await context.Response.WriteAsync("Move to " + entity.RedirectUrl);
                 }
                 else
