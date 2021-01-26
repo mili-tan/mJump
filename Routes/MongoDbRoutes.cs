@@ -18,15 +18,22 @@ namespace mJump
         {
             endpoints.Map(Startup.IsPublic ? "/add" : $"/{Startup.UID}/add", async context =>
             {
+                context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
                 var query = context.Request.Query;
                 if (query.TryGetValue("url", out var url))
                 {
-                    var urlFind = Collection.Find(x => x.RedirectUrl == url);
-                    if (await urlFind.CountDocumentsAsync() > 0)
-                        await context.Response.WriteAsync(Startup.BaseURL + "/" + urlFind.FirstOrDefault().Name);
                     var nameStr = Convert.ToBase64String(Guid.NewGuid().ToByteArray()).Replace("/", "-")
                         .Replace("+", "_").Replace("=", "").Substring(0, 8);
                     if (query.TryGetValue("name", out var name)) nameStr = name.ToString().Split('.').FirstOrDefault();
+                    else
+                    {
+                        var urlFind = Collection.Find(x => x.RedirectUrl == url);
+                        if (await urlFind.CountDocumentsAsync() > 0)
+                        {
+                            await context.Response.WriteAsync(Startup.BaseURL + "/" + urlFind.FirstOrDefault().Name);
+                            return;
+                        }
+                    }
                     if (await Collection.Find(x => x.Name == nameStr).CountDocumentsAsync() > 0)
                         await context.Response.WriteAsync("Already Exists");
                     else
@@ -37,7 +44,7 @@ namespace mJump
                             RedirectUrl = HttpUtility.UrlDecode(url.ToString()),
                             Name = nameStr
                         });
-                        await context.Response.WriteAsync("OK");
+                        await context.Response.WriteAsync(Startup.BaseURL + "/" + nameStr);
                     }
                 }
                 else await context.Response.WriteAsync("Invalid");

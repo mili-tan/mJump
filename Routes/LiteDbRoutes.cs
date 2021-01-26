@@ -16,18 +16,19 @@ namespace mJump
         {
             endpoints.Map(Startup.IsPublic ? "/add" : $"/{Startup.UID}/add", async context =>
             {
+                context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
                 var query = context.Request.Query;
                 if (query.TryGetValue("url", out var url))
                 {
-                    if (Collection.Exists(x => x.RedirectUrl == url))
-                    {
-                        var findName = Collection.FindOne(x => x.RedirectUrl == url).Name;
-                        await context.Response.WriteAsync(Startup.BaseURL + "/" + findName);
-                    }
-
                     var nameStr = Convert.ToBase64String(Guid.NewGuid().ToByteArray()).Replace("/", "-")
                         .Replace("+", "_").Replace("=", "").Substring(0, 8);
                     if (query.TryGetValue("name", out var name)) nameStr = name.ToString().Split('.').FirstOrDefault();
+                    else if (Collection.Exists(x => x.RedirectUrl == url))
+                    {
+                        var findName = Collection.FindOne(x => x.RedirectUrl == url).Name;
+                        await context.Response.WriteAsync(Startup.BaseURL + "/" + findName);
+                        return;
+                    }
                     if (Collection.Exists(x => x.Name == nameStr)) await context.Response.WriteAsync("Already Exists");
                     else
                     {

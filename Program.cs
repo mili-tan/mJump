@@ -17,7 +17,7 @@ namespace mJump
                 .ConfigureServices(services => services.AddRouting())
                 .ConfigureKestrel(options =>
                 {
-                    options.Listen(new IPEndPoint(IPAddress.Loopback, 2025), listenOptions =>
+                    options.Listen(new IPEndPoint(IPAddress.Any, 2025), listenOptions =>
                     {
                         listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
                         //if (true) listenOptions.UseHttps();

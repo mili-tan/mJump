@@ -28,7 +28,6 @@ namespace mJump
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory)
         {
-            app.UseDeveloperExceptionPage();
             if (env.IsDevelopment()) app.UseDeveloperExceptionPage();
             app.UseRouting().UseEndpoints(endpoints =>
             {
