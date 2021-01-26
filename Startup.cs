@@ -12,6 +12,8 @@ namespace mJump
     public class Startup
     {
         public static Guid UID = Guid.NewGuid();
+        public static string BaseURL = File.Exists("url.txt") ? File.ReadAllText("url.txt").TrimEnd('/') : string.Empty;
+        public static bool IsPublic = File.Exists("public.txt");
         private static bool isMongo = File.Exists("mongo.txt");
 
         public void ConfigureServices(IServiceCollection services)
@@ -32,8 +34,16 @@ namespace mJump
             {
                 endpoints.Map("/", async context =>
                 {
-                    context.Response.ContentType = "text/html";
-                    await context.Response.WriteAsync("Welcome to mJump");
+                    if (IsPublic)
+                    {
+                        context.Response.Redirect(await File.ReadAllTextAsync("public.txt"));
+                        await context.Response.WriteAsync("Mova to mJump Dash");
+                    }
+                    else
+                    {
+                        context.Response.ContentType = "text/html";
+                        await context.Response.WriteAsync("Welcome to mJump");
+                    }
                 });
                 endpoints.Map("/IsMongo", async context =>
                 {

@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -15,12 +16,17 @@ namespace mJump
 
         public static void Route(IEndpointRouteBuilder endpoints)
         {
-            endpoints.Map($"/{Startup.UID}/add", async context =>
+            endpoints.Map(Startup.IsPublic ? "/add" : $"/{Startup.UID}/add", async context =>
             {
                 var query = context.Request.Query;
-                if (query.TryGetValue("url", out var url) && query.TryGetValue("name", out var name))
+                if (query.TryGetValue("url", out var url))
                 {
-                    var nameStr = name.ToString().Split('.').FirstOrDefault();
+                    var urlFind = Collection.Find(x => x.RedirectUrl == url);
+                    if (await urlFind.CountDocumentsAsync() > 0)
+                        await context.Response.WriteAsync(Startup.BaseURL + "/" + urlFind.FirstOrDefault().Name);
+                    var nameStr = Convert.ToBase64String(Guid.NewGuid().ToByteArray()).Replace("/", "-")
+                        .Replace("+", "_").Replace("=", "").Substring(0, 8);
+                    if (query.TryGetValue("name", out var name)) nameStr = name.ToString().Split('.').FirstOrDefault();
                     if (await Collection.Find(x => x.Name == nameStr).CountDocumentsAsync() > 0)
                         await context.Response.WriteAsync("Already Exists");
                     else

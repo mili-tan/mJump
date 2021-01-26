@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Web;
 using LiteDB;
 using Microsoft.AspNetCore.Builder;
@@ -13,14 +14,21 @@ namespace mJump
         public static ILiteCollection<JumpEntity> Collection;
         public static void Route(IEndpointRouteBuilder endpoints)
         {
-            endpoints.Map($"/{Startup.UID}/add", async context =>
+            endpoints.Map(Startup.IsPublic ? "/add" : $"/{Startup.UID}/add", async context =>
             {
                 var query = context.Request.Query;
-                if (query.TryGetValue("url", out var url) && query.TryGetValue("name", out var name))
+                if (query.TryGetValue("url", out var url))
                 {
-                    var nameStr = name.ToString().Split('.').FirstOrDefault();
-                    if (Collection.Exists(x => x.Name == nameStr))
-                        await context.Response.WriteAsync("Already Exists");
+                    if (Collection.Exists(x => x.RedirectUrl == url))
+                    {
+                        var findName = Collection.FindOne(x => x.RedirectUrl == url).Name;
+                        await context.Response.WriteAsync(Startup.BaseURL + "/" + findName);
+                    }
+
+                    var nameStr = Convert.ToBase64String(Guid.NewGuid().ToByteArray()).Replace("/", "-")
+                        .Replace("+", "_").Replace("=", "").Substring(0, 8);
+                    if (query.TryGetValue("name", out var name)) nameStr = name.ToString().Split('.').FirstOrDefault();
+                    if (Collection.Exists(x => x.Name == nameStr)) await context.Response.WriteAsync("Already Exists");
                     else
                     {
                         Collection.Insert(new JumpEntity
@@ -29,7 +37,7 @@ namespace mJump
                             RedirectUrl = HttpUtility.UrlDecode(url.ToString()),
                             Name = nameStr
                         });
-                        await context.Response.WriteAsync("OK");
+                        await context.Response.WriteAsync(Startup.BaseURL + "/" + nameStr);
                     }
                 }
                 else await context.Response.WriteAsync("Invalid");
