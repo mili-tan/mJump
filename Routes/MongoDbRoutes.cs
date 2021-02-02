@@ -4,6 +4,7 @@ using System.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace mJump
@@ -12,7 +13,7 @@ namespace mJump
     {
         public static MongoClient Client;
         public static IMongoDatabase Database;
-        private static IMongoCollection<JumpEntity> Collection;
+        private static IMongoCollection<BsonDocument> Collection;
 
         public static void Route(IEndpointRouteBuilder endpoints)
         {
@@ -22,27 +23,28 @@ namespace mJump
                 var query = context.Request.Query;
                 if (query.TryGetValue("url", out var url))
                 {
+                    var urlDecode = HttpUtility.UrlDecode(url.ToString());
                     var nameStr = Convert.ToBase64String(Guid.NewGuid().ToByteArray()).Replace("/", "-")
                         .Replace("+", "_").Replace("=", "").Substring(0, 8);
                     if (query.TryGetValue("name", out var name)) nameStr = name.ToString().Split('.').FirstOrDefault();
                     else
                     {
-                        var urlFind = Collection.Find(x => x.RedirectUrl == url);
+                        var urlFind = Collection.Find(x => x["RedirectUrl"] == urlDecode);
                         if (await urlFind.CountDocumentsAsync() > 0)
                         {
-                            await context.Response.WriteAsync(Startup.BaseURL + "/" + urlFind.FirstOrDefault().Name);
+                            await context.Response.WriteAsync(Startup.BaseURL + "/" + urlFind.FirstOrDefault()["Name"]);
                             return;
                         }
                     }
-                    if (await Collection.Find(x => x.Name == nameStr).CountDocumentsAsync() > 0)
+                    if (await Collection.Find(x => x["Name"] == nameStr).CountDocumentsAsync() > 0)
                         await context.Response.WriteAsync("Already Exists");
                     else
                     {
-                        await Collection.InsertOneAsync(new JumpEntity
+                        await Collection.InsertOneAsync(new BsonDocument
                         {
-                            StatusCode = query.TryGetValue("code", out var code) ? int.Parse(code) : 302,
-                            RedirectUrl = HttpUtility.UrlDecode(url.ToString()),
-                            Name = nameStr
+                            ["StatusCode"] = query.TryGetValue("code", out var code) ? int.Parse(code) : 302,
+                            ["RedirectUrl"] = urlDecode,
+                            ["Name"] = nameStr
                         });
                         await context.Response.WriteAsync(Startup.BaseURL + "/" + nameStr);
                     }
@@ -52,13 +54,13 @@ namespace mJump
             endpoints.Map("/{Name}", async context =>
             {
                 var name = context.GetRouteValue("Name").ToString().Split('.').FirstOrDefault();
-                var find = Collection.Find(x => x.Name == name);
+                var find = Collection.Find(x => x["Name"] == name);
                 if (await find.CountDocumentsAsync() > 0)
                 {
                     var entity = find.FirstOrDefault();
-                    context.Response.Redirect(entity.RedirectUrl);
-                    context.Response.StatusCode = entity.StatusCode;
-                    await context.Response.WriteAsync("Move to " + entity.RedirectUrl);
+                    context.Response.Redirect(entity["RedirectUrl"].ToString());
+                    context.Response.StatusCode = entity["StatusCode"].ToInt32();
+                    await context.Response.WriteAsync("Move to " + entity["RedirectUrl"]);
                 }
                 else
                 {
@@ -72,17 +74,9 @@ namespace mJump
         {
             Client = new MongoClient(connection);
             Database = Client.GetDatabase(dbName);
-            Collection = Database.GetCollection<JumpEntity>(collection);
+            Collection = Database.GetCollection<BsonDocument>(collection);
             //Collection.Indexes.CreateOne(
             //    new CreateIndexModel<JumpEntity>(Builders<JumpEntity>.IndexKeys.Text(x => x.Name)));
-        }
-
-        public class JumpEntity
-        {
-            public MongoDB.Bson.ObjectId Id { get; set; }
-            public string Name { get; set; }
-            public string RedirectUrl { get; set; }
-            public int StatusCode { get; set; }
         }
     }
 }
